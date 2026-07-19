@@ -1,4 +1,6 @@
-## Codex Bark Notifier v0.1.0
+## Codex Bark Notifier v0.1.2
+
+修复 Windows 双击 exe 后立即退出、没有显示配置窗口的问题。GUI 已改为原生 Win32 控件，并移除 Walk tooltip 初始化依赖。
 
 首个 Windows x64 公开版本。
 
