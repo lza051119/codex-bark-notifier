@@ -30,3 +30,9 @@ func TestStatusTextNeverIncludesDeviceKey(t *testing.T) {
 		t.Fatal("status text contains the device key")
 	}
 }
+
+func TestGUIBackendDoesNotUseWalkTooltips(t *testing.T) {
+	if got := GUIBackend(); got != "win32" {
+		t.Fatalf("GUIBackend = %q, want win32", got)
+	}
+}
