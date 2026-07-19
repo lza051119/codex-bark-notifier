@@ -95,7 +95,7 @@ Device Key 保存在 Windows DPAPI 保护的本地配置中。日志只记录时
 
 ```powershell
 go test ./...
-.\scripts\build-release.ps1 -Version 0.1.0
+.\scripts\build-release.ps1 -Version 0.1.2
 ```
 
 生成文件：
