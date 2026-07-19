@@ -4,9 +4,9 @@
 
 **Goal:** Build and publish a public Windows x64 Go application that configures Bark notifications, receives Codex task-completion events, and provides a tested GitHub Release.
 
-**Architecture:** A single Go executable has GUI mode and event mode. GUI mode uses native Windows controls through `github.com/lxn/walk`; event mode accepts Codex's legacy notify argument or Stop-hook JSON on stdin, forwards the existing Windows notifier, and sends an HTTPS Bark request. User configuration lives under `%APPDATA%\\CodexBarkNotifier`; the Bark device key is protected with Windows DPAPI.
+**Architecture:** A single Go executable has GUI mode and event mode. GUI mode uses direct Win32 controls through `github.com/lxn/win` and `golang.org/x/sys/windows`; event mode accepts Codex's legacy notify argument or Stop-hook JSON on stdin, forwards the existing Windows notifier, and sends an HTTPS Bark request. User configuration lives under `%APPDATA%\\CodexBarkNotifier`; the Bark device key is protected with Windows DPAPI.
 
-**Tech Stack:** Go 1.26+, `github.com/lxn/walk`, `github.com/lxn/win`, `golang.org/x/sys/windows`, Go standard library HTTP/JSON/testing, GitHub CLI, Windows PowerShell.
+**Tech Stack:** Go 1.26+, `github.com/lxn/win`, `golang.org/x/sys/windows`, Go standard library HTTP/JSON/testing, GitHub CLI, Windows PowerShell.
 
 ## Global Constraints
 
@@ -175,7 +175,7 @@ Test the view-model validation independently of native window creation: invalid 
 
 - [ ] **Step 3: Implement the minimum native window and view model**
 
-Use Walk native controls, keep business logic in testable view-model functions, and invoke the same config/codex/bark interfaces as event mode. The enabled checkbox changes only the Bark setting.
+Use direct Win32 controls, keep business logic in testable view-model functions, and invoke the same config/codex/bark interfaces as event mode. The enabled checkbox changes only the Bark setting. Avoid Walk's tooltip subsystem because its initialization can fail before the configuration window is displayed.
 
 - [ ] **Step 4: Rerun tests and compile with `GOOS=windows GOARCH=amd64`**
 
