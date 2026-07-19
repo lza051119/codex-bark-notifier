@@ -5,6 +5,7 @@ package ui
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"os/exec"
@@ -72,6 +73,12 @@ func Show(store *config.Store, manager *codex.Manager) error {
 	if err := ui.create(settings); err != nil {
 		return err
 	}
+	defer func() {
+		if ui.hwnd != 0 {
+			win.DestroyWindow(ui.hwnd)
+			ui.hwnd = 0
+		}
+	}()
 
 	var msg win.MSG
 	for {
@@ -97,7 +104,10 @@ func (ui *nativeWindow) create(settings config.Settings) error {
 		HbrBackground: win.GetSysColorBrush(win.COLOR_WINDOW),
 		LpszClassName: className,
 	}
-	win.RegisterClassEx(&class)
+	atom := win.RegisterClassEx(&class)
+	if atom == 0 && !errors.Is(windows.GetLastError(), windows.ERROR_CLASS_ALREADY_EXISTS) {
+		return fmt.Errorf("Windows window class registration failed: %w", windows.GetLastError())
+	}
 
 	title := syscall.StringToUTF16Ptr("Codex Bark Notifier")
 	ui.hwnd = win.CreateWindowEx(
@@ -115,25 +125,42 @@ func (ui *nativeWindow) create(settings config.Settings) error {
 		nil,
 	)
 	if ui.hwnd == 0 {
-		return errors.New("Windows window creation failed")
+		if atom != 0 {
+			win.UnregisterClass(className)
+		}
+		return fmt.Errorf("Windows window creation failed: %w", windows.GetLastError())
 	}
 
-	ui.createControls(settings)
+	if err := ui.createControls(settings); err != nil {
+		win.DestroyWindow(ui.hwnd)
+		ui.hwnd = 0
+		if atom != 0 {
+			win.UnregisterClass(className)
+		}
+		return err
+	}
 	win.ShowWindow(ui.hwnd, win.SW_SHOW)
 	win.UpdateWindow(ui.hwnd)
 	return nil
 }
 
-func (ui *nativeWindow) createControls(settings config.Settings) {
+func (ui *nativeWindow) createControls(settings config.Settings) error {
 	font := uintptr(win.GetStockObject(win.DEFAULT_GUI_FONT))
+	var controlErr error
+	require := func(name string, hwnd win.HWND) win.HWND {
+		if hwnd == 0 && controlErr == nil {
+			controlErr = fmt.Errorf("Windows %s creation failed: %w", name, windows.GetLastError())
+		}
+		return hwnd
+	}
 	label := func(text string, x, y, width, height int32) win.HWND {
-		return ui.createControl("STATIC", text, win.WS_CHILD|win.WS_VISIBLE, x, y, width, height, 0, font)
+		return require("label", ui.createControl("STATIC", text, win.WS_CHILD|win.WS_VISIBLE, x, y, width, height, 0, font))
 	}
 	edit := func(text string, style uint32, x, y, width, height int32, id int) win.HWND {
-		return ui.createControl("EDIT", text, win.WS_CHILD|win.WS_VISIBLE|win.WS_TABSTOP|style, x, y, width, height, id, font)
+		return require("input", ui.createControl("EDIT", text, win.WS_CHILD|win.WS_VISIBLE|win.WS_TABSTOP|style, x, y, width, height, id, font))
 	}
 	button := func(text string, x, y, width, height int32, id int) win.HWND {
-		return ui.createControl("BUTTON", text, win.WS_CHILD|win.WS_VISIBLE|win.WS_TABSTOP|win.BS_PUSHBUTTON, x, y, width, height, id, font)
+		return require("button", ui.createControl("BUTTON", text, win.WS_CHILD|win.WS_VISIBLE|win.WS_TABSTOP|win.BS_PUSHBUTTON, x, y, width, height, id, font))
 	}
 
 	label("Bark 服务地址", 24, 24, 200, 22)
@@ -141,6 +168,7 @@ func (ui *nativeWindow) createControls(settings config.Settings) {
 	label("Device Key（仅保存在本机）", 24, 88, 300, 22)
 	ui.editKey = edit(settings.DeviceKey, win.ES_LEFT|win.ES_AUTOHSCROLL|win.ES_PASSWORD, 24, 112, 590, 28, controlKey)
 	ui.check = ui.createControl("BUTTON", "开启 Codex 手机提醒", win.WS_CHILD|win.WS_VISIBLE|win.WS_TABSTOP|win.BS_AUTOCHECKBOX, 24, 154, 250, 28, controlEnabled, font)
+	ui.check = require("enabled checkbox", ui.check)
 	if settings.Enabled {
 		win.SendMessage(ui.check, win.BM_SETCHECK, win.BST_CHECKED, 0)
 	}
@@ -152,6 +180,10 @@ func (ui *nativeWindow) createControls(settings config.Settings) {
 	button("卸载 Codex 接入", 414, 238, 140, 32, buttonUninstall)
 	button("打开 README", 24, 280, 120, 32, buttonREADME)
 	ui.status = label(StatusText(settings.Enabled, settings.DeviceKey), 24, 332, 590, 28)
+	if controlErr != nil {
+		return controlErr
+	}
+	return nil
 }
 
 func (ui *nativeWindow) createControl(className, text string, style uint32, x, y, width, height int32, id int, font uintptr) win.HWND {
