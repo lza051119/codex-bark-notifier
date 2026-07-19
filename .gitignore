@@ -1,0 +1,10 @@
+.env
+*.key
+*.log
+*.tmp
+*.test
+config.local.json
+dist/
+build/
+coverage/
+vendor/
