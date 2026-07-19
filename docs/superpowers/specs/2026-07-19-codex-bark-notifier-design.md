@@ -2,7 +2,7 @@
 
 ## Goal
 
-Deliver a public, Windows-native Go application that receives Codex task-completion notifications and sends a configurable Bark push notification without requiring users to install Node.js. The application must provide an in-app configuration and enable/disable switch, preserve Codex's normal notification behavior, and publish a reproducible Windows x64 release.
+Deliver a public, Windows-native Go application that receives Codex task-completion notifications and sends a configurable Bark push notification without requiring users to install Node.js. The application must provide an in-app configuration and enable/disable switch, preserve Codex's normal notification behavior, and publish a reproducible Windows x64 release. The configuration window must avoid third-party tooltip initialization that can terminate the process before the window is shown.
 
 ## Scope
 
@@ -85,4 +85,3 @@ The first public release will include:
 - `SHA256SUMS.txt`
 - `README.md` with Windows installation steps and phone-side Bark installation/configuration instructions
 - Source code in the public repository and GitHub-generated source archives
-
