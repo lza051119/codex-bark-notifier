@@ -1,0 +1,42 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.26.x'
+
+      - name: Run tests
+        shell: pwsh
+        run: go test ./...
+
+      - name: Scan tracked files
+        shell: pwsh
+        run: .\scripts\security-scan.ps1
+
+      - name: Build release
+        shell: pwsh
+        run: .\scripts\build-release.ps1 -Version "${{ github.ref_name }}"
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Codex Bark Notifier ${{ github.ref_name }}
+          body_path: release-notes.md
+          files: |
+            dist/codex-bark-notifier-windows-x64.exe
+            dist/SHA256SUMS.txt
